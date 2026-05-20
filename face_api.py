@@ -140,18 +140,37 @@ def predict_face():
         initialize_models()
     if 'file' not in request.files or request.files['file'].filename == '':
         return jsonify({'success': False, 'error': 'No file provided'}), 400
+    
     image_file = request.files['file']
-    if ALLOWED_IMAGE_TYPES and (getattr(image_file, 'mimetype', '') or '').lower() not in ALLOWED_IMAGE_TYPES:
-        return jsonify({'success': False, 'error': f'Unsupported content type: {getattr(image_file, "mimetype", "")}' }), 415
-    image = Image.open(image_file.stream).convert('RGB')
-    image_array = _preprocess_image(image)
-    probs = _predict_probs(image_array)
-    if len(probs) != len(EMOTION_LABELS):
-        probs = np.full(len(EMOTION_LABELS), 1.0 / len(EMOTION_LABELS))
-    pred_idx = int(np.argmax(probs))
-    emotion = EMOTION_LABELS[pred_idx]
-    return jsonify({'success': True, 'predicted_index': pred_idx, 'predicted_label': emotion, 'predicted_emotion': emotion, 'confidence': float(np.max(probs)), 'emotion_probabilities': probs.tolist(), 'emotion_labels': EMOTION_LABELS})
+    filename = (getattr(image_file, 'filename', '') or '').lower()
+    mimetype = (getattr(image_file, 'mimetype', '') or '').lower()
+    
+    # Dual-mode validation (mimetype or extension fallback)
+    ALLOWED_EXTENSIONS = {'.png', '.jpg', '.jpeg', '.bmp', '.gif', '.tiff', '.tif'}
+    ext = os.path.splitext(filename)[1]
+    
+    if not (mimetype in ALLOWED_IMAGE_TYPES or ext in ALLOWED_EXTENSIONS):
+        return jsonify({'success': False, 'error': f'Unsupported file format: {filename or mimetype}'}), 415
+        
+    try:
+        try:
+            with Image.open(image_file.stream) as img:
+                image = img.convert('RGB')
+                image_array = _preprocess_image(image)
+        except Exception as e:
+            return jsonify({'success': False, 'error': f'Corrupted or invalid image file: {str(e)}'}), 400
+            
+        probs = _predict_probs(image_array)
+        if len(probs) != len(EMOTION_LABELS):
+            probs = np.full(len(EMOTION_LABELS), 1.0 / len(EMOTION_LABELS))
+        pred_idx = int(np.argmax(probs))
+        emotion = EMOTION_LABELS[pred_idx]
+        return jsonify({'success': True, 'predicted_index': pred_idx, 'predicted_label': emotion, 'predicted_emotion': emotion, 'confidence': float(np.max(probs)), 'emotion_probabilities': probs.tolist(), 'emotion_labels': EMOTION_LABELS})
+    except Exception as e:
+        logging.error(f"Face prediction failed: {e}")
+        return jsonify({'success': False, 'error': f'Internal prediction error: {str(e)}'}), 500
 
 
 if __name__ == '__main__':
     app.run(host=os.environ.get('FACE_API_HOST', CFG['modalities']['face']['api']['host']), port=int(os.environ.get('FACE_API_PORT', CFG['modalities']['face']['api']['port'])), debug=False)
+
