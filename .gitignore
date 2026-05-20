@@ -1,4 +1,4 @@
 __pycache__/
 *.pyc
 .venv/
-pretrained/
+# Allow pretrained weights to be tracked via LFS
