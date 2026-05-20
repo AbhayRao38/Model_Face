@@ -1,0 +1,103 @@
+# Central configuration for multimodal-emotion-mci-system
+# Adjust paths relative to repo root
+
+# Global
+seed: 42
+matplotlib_backend: Agg
+
+paths:
+  repo_root: .
+  models_root: models
+  artifacts_root: artifacts
+  artifacts_models: artifacts/models
+  artifacts_data: artifacts/data
+  artifacts_reports: artifacts/reports
+  datasets_root: datasets
+  services_root: services
+  training_root: training
+
+# Modalities
+modalities:
+  speech:
+    model_path: models/lgbm_speech_model.pkl
+    pretrained_path: model_speech/pretrained/facebook_wav2vec2-base-960h
+    labels_path: model_speech/labels_speech.txt
+    data_dir: artifacts/data
+    x_file: X_speech.npy
+    y_file: y_speech.npy
+    pipeline_artifact: models/speech_pipeline.joblib
+    api:
+      host: 127.0.0.1
+      port: 5004
+  face:
+    model_path: models/best_pytorch_improved_model.pth
+    pretrained_path: model_face/pretrained/convnext_tiny.pth
+    labels_path: model_face/labels_face.txt
+    api:
+      host: 127.0.0.1
+      port: 5001
+  eye:
+    model_path: models/emotion_modelv2_cuda.pth
+    pretrained_path: model_eye/pretrained/efficientnet_b0.pth
+    labels_path: models/label_encoder_cuda.pkl
+    api:
+      host: 127.0.0.1
+      port: 5002
+  mri:
+    model_path: models/vgg16_best_fold1.keras  # Primary model (fallback)
+    pretrained_path: model_mri/pretrained/resnet50.pth
+    kfold_model_pattern: models/vgg16_best_fold*.keras  # K-fold ensemble models
+    architecture: VGG16
+    ensemble_type: performance_weighted
+    api:
+      host: 127.0.0.1
+      port: 5003
+
+fusion:
+  api:
+    host: 127.0.0.1
+    port: 5000
+  modality_weights:
+    mri: 0.40
+    face: 0.25
+    speech: 0.20
+    eye: 0.15
+  thresholds:
+    conservative: 0.75
+    balanced: 0.55
+    sensitive: 0.35
+    screening: 0.25
+  emotion_to_mci:
+    face:
+      happy: 0.10
+      neutral: 0.40
+      sad: 0.70
+      fear: 0.80
+      angry: 0.60
+      surprise: 0.20
+      disgust: 0.50
+      contempt: 0.50
+    eye:
+      happy: 0.10
+      neutral: 0.40
+      sad: 0.60
+      fear: 0.70
+      angry: 0.50
+      surprise: 0.20
+      disgust: 0.50
+      contempt: 0.50
+    speech:
+      happy: 0.10
+      neutral: 0.40
+      sad: 0.65
+      fear: 0.75
+      angry: 0.55
+      surprise: 0.20
+      disgust: 0.55
+      contempt: 0.50
+
+security:
+  max_upload_mb: 50
+  allowed_image_types: ["image/jpeg", "image/png", "image/bmp", "image/gif", "image/tiff"]
+  allowed_audio_types: ["audio/wav", "audio/mpeg", "audio/mp3", "audio/ogg", "audio/m4a", "audio/aac"]
+  allowed_dicom_extensions: [".dcm"]
