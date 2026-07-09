@@ -96,7 +96,9 @@ def initialize_models():
             state = torch.load(model_path, map_location='cpu')
             if isinstance(state, dict) and 'model_state_dict' in state:
                 state = state['model_state_dict']
-            model.load_state_dict(state, strict=False)
+            # Strip model. prefix from state dict keys if present
+            new_state = {k[6:] if k.startswith('model.') else k: v for k, v in state.items()}
+            model.load_state_dict(new_state, strict=False)
             model.eval()
             face_model = model
             logging.info(f'Loaded face model from {model_path}')
